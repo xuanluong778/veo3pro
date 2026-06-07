@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+data/flow-jobs/
+data/users.json
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/ultra-downloads/
+data/vbee-preview-cache/
+dist-packaging/
+veo3pro/

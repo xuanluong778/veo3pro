@@ -1,0 +1,64 @@
+VEO3 PRO — PHIÊN BẢN PORTABLE CHO WINDOWS
+
+==========================================
+
+
+
+1) Chạy nhanh
+
+   - File chạy Veo3Pro.bat nằm ngay thư mục gốc sau khi giải nén (cùng cấp với runtime\ và app\).
+
+   - Giải nén thư mục Veo3Pro (giữ nguyên cấu trúc runtime\ và app\).
+
+   - Vào thư mục app, tạo file .env:
+
+       • Sao chép .env.example → đổi tên thành .env
+
+       • Điền GEMINI_API_KEY=... (lấy từ Google AI Studio)
+
+   - Double-click Veo3Pro.bat — trình duyệt mặc định sẽ mở khi máy chủ đã sẵn sàng (không cần gõ tay localhost).
+
+   - Nếu không tự mở: mở http://127.0.0.1:8787 (hoặc đúng PORT trong app\.env).
+
+
+
+2) FFmpeg (bắt buộc để ghép clip / chuẩn hóa video)
+
+   - Cài FFmpeg và thêm vào PATH của Windows, HOẶC
+
+   - Đặt bản portable vào: tools\ffmpeg\bin\ffmpeg.exe
+
+     (file .bat đã tự thêm PATH cho thư mục này)
+
+
+
+3) Redis / hàng đợi BullMQ (tùy chọn)
+
+   - Mặc định job lưu file, không cần Redis.
+
+   - Nếu bật FLOW_USE_QUEUE=true trong .env: cần Redis và có thể chạy thêm worker:
+
+       runtime\node.exe app\server\worker.js
+
+     (từ thư mục gốc của bản portable, hoặc cd app rồi gọi đường dẫn đầy đủ)
+
+
+
+4) Gửi cho khách hàng (đóng gói trên máy Windows, trong thư mục mã nguồn)
+
+   - npm run pack:win-portable
+
+       → zip: dist-packaging\Veo3Pro-windows-portable.zip
+
+   - Nếu lỗi EPERM khi npm prune: npm run pack:win-portable:fat
+
+   - Chỉ tạo thư mục (không nén, nhanh): npm run pack:win-portable:folder
+
+
+
+5) Lưu ý bảo mật
+
+   - Không chia sẻ .env chứa API key công khai.
+
+   - Khách tự tạo .env trên máy họ.
+
