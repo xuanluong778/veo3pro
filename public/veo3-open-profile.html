@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VEO3 — Mở Chrome profile</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 1.1rem 1.25rem;
+        line-height: 1.5;
+      }
+      h1 { font-size: 1rem; margin: 0 0 0.35rem; }
+      .name { color: #93c5fd; font-weight: 700; }
+      .status {
+        margin-top: 0.85rem;
+        padding: 0.65rem 0.85rem;
+        border-radius: 10px;
+        background: rgba(37, 99, 235, 0.15);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        font-size: 0.88rem;
+      }
+      .status.err {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(248, 113, 113, 0.35);
+      }
+      .hint { color: #94a3b8; font-size: 0.82rem; margin-top: 0.5rem; }
+      button {
+        margin-top: 0.75rem;
+        margin-right: 0.5rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: 8px;
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+      button.sec { background: #334155; }
+      button:hover { filter: brightness(1.08); }
+      #actions { display: none; }
+    </style>
+  </head>
+  <body>
+    <h1>Mở Chrome profile <span class="name" id="profileLabel">…</span></h1>
+    <p class="hint">Profile riêng tại <code>C:\VEO3PRO\ChromeProfiles\</code></p>
+    <div class="status" id="status">Đang gọi VEO3 Launcher…</div>
+    <div id="actions">
+      <button type="button" id="retryBtn">Thử mở lại</button>
+      <button type="button" class="sec" id="closeBtn">Đóng</button>
+    </div>
+
+    <script>
+      (function () {
+        var APP_URL = 'https://marketingautoaz.com/';
+        var TARGET_URL = 'https://gemini.google.com/app';
+        var params = new URLSearchParams(location.search);
+        var profileId = (params.get('profileId') || 'default').trim() || 'default';
+        var profileName = (params.get('profileName') || profileId).trim();
+        var protocolUrl =
+          'veo3pro://open-profile?profileId=' +
+          encodeURIComponent(profileId) +
+          '&appUrl=' +
+          encodeURIComponent(APP_URL) +
+          '&targetUrl=' +
+          encodeURIComponent(TARGET_URL);
+
+        document.getElementById('profileLabel').textContent = profileName;
+        var statusEl = document.getElementById('status');
+        var actionsEl = document.getElementById('actions');
+        var responded = false;
+
+        function notifyParent(type) {
+          try {
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage({ type: type, profileId: profileId }, window.location.origin);
+            }
+          } catch (e) {}
+        }
+
+        function markOpened() {
+          if (responded) return;
+          responded = true;
+          statusEl.textContent = 'Đã gửi lệnh mở Chrome. Có thể đóng cửa sổ này.';
+          notifyParent('veo3:opened');
+          setTimeout(function () {
+            try {
+              window.close();
+            } catch (e) {}
+          }, 600);
+        }
+
+        function markNeedsInstall() {
+          if (responded) return;
+          responded = true;
+          statusEl.textContent =
+            'Chưa nhận được VEO3 Launcher. Cài launcher một lần (install.bat trong ZIP), rồi thử lại.';
+          statusEl.className = 'status err';
+          actionsEl.style.display = 'block';
+          notifyParent('veo3:needs-install');
+        }
+
+        function fireProtocol() {
+          responded = false;
+          statusEl.className = 'status';
+          statusEl.textContent = 'Đang gọi VEO3 Launcher…';
+          actionsEl.style.display = 'none';
+
+          try {
+            var a = document.createElement('a');
+            a.href = protocolUrl;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function () {
+              try {
+                a.remove();
+              } catch (e) {}
+            }, 100);
+          } catch (e) {}
+
+          try {
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = protocolUrl;
+            document.body.appendChild(iframe);
+            setTimeout(function () {
+              try {
+                iframe.remove();
+              } catch (e) {}
+            }, 2000);
+          } catch (e) {}
+
+          setTimeout(function () {
+            if (!responded) markNeedsInstall();
+          }, 2500);
+        }
+
+        window.addEventListener('blur', markOpened);
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden) markOpened();
+        });
+
+        document.getElementById('retryBtn').addEventListener('click', function () {
+          responded = false;
+          fireProtocol();
+        });
+        document.getElementById('closeBtn').addEventListener('click', function () {
+          window.close();
+        });
+
+        fireProtocol();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\veo3pro]
+@="URL:VEO3 Launcher Protocol"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\veo3pro\shell]
+
+[HKEY_CURRENT_USER\Software\Classes\veo3pro\shell\open]
+
+[HKEY_CURRENT_USER\Software\Classes\veo3pro\shell\open\command]
+@="\"C:\\VEO3PRO\\Launcher\\launch.cmd\" \"%1\""

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Veo3Pro — Mở Chrome profile</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 1.25rem;
+        line-height: 1.5;
+      }
+      h1 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+      .slug { color: #93c5fd; font-weight: 700; }
+      .hint { color: #94a3b8; font-size: 0.88rem; margin: 0.5rem 0 0; }
+      .status { margin-top: 1rem; padding: 0.65rem 0.85rem; border-radius: 10px; background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(56, 189, 248, 0.25); font-size: 0.9rem; }
+      .err { background: rgba(239, 68, 68, 0.12); border-color: rgba(248, 113, 113, 0.35); }
+      button {
+        margin-top: 0.85rem;
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+      button:hover { background: #1d4ed8; }
+    </style>
+  </head>
+  <body>
+    <h1>Chrome profile mới — <span class="slug" id="slugLabel">…</span></h1>
+    <p class="hint" id="subLabel">Profile tách biệt — không dùng Gmail/Chrome đang đăng nhập trên trình duyệt này.</p>
+    <div class="status" id="status">Đang mở Chrome profile mới…</div>
+    <button type="button" id="retryBtn" hidden>Thử mở lại</button>
+    <button type="button" id="setupBtn" hidden>Cài bridge (1 lần) &amp; mở Chrome</button>
+
+    <script>
+      (function () {
+        const params = new URLSearchParams(location.search);
+        const slug = (params.get('slug') || 'default').trim() || 'default';
+        const name = (params.get('name') || slug).trim();
+        const protocolUrl = 'veo3pro://' + encodeURIComponent(slug);
+        const BRIDGE_KEY = 'veo3pro_chrome_bridge_v1';
+
+        document.getElementById('slugLabel').textContent = name;
+        const statusEl = document.getElementById('status');
+        const retryBtn = document.getElementById('retryBtn');
+        const setupBtn = document.getElementById('setupBtn');
+
+        let launched = false;
+
+        function setStatus(msg, isErr) {
+          statusEl.textContent = msg;
+          statusEl.className = 'status' + (isErr ? ' err' : '');
+        }
+
+        function tryProtocol() {
+          launched = false;
+          setStatus('Đang khởi chạy Chrome profile mới (veo3pro://)…');
+          try {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = protocolUrl;
+            document.body.appendChild(iframe);
+            setTimeout(function () {
+              try {
+                iframe.remove();
+              } catch (e) {}
+            }, 2000);
+          } catch (e) {}
+          try {
+            window.location.href = protocolUrl;
+          } catch (e) {}
+        }
+
+        function downloadSetupAndOpen() {
+          setStatus('Đang tải trình cài bridge (chạy 1 lần trên Windows)…');
+          fetch('/api/tools/chrome-protocol-setup', { method: 'GET', credentials: 'include' })
+            .then(function (r) {
+              if (!r.ok) throw new Error('Không tải được setup');
+              return r.blob();
+            })
+            .then(function (blob) {
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = 'Veo3Pro_ChromeBridge_Setup.bat';
+              a.click();
+              URL.revokeObjectURL(a.href);
+              setStatus(
+                'Đã tải Veo3Pro_ChromeBridge_Setup.bat — double-click file (1 lần). Sau đó bấm «Mở Chrome» lại — Chrome profile mới sẽ tự mở, không dùng profile hiện tại.',
+                true,
+              );
+              setupBtn.hidden = false;
+            })
+            .catch(function () {
+              fallbackOpenBat();
+            });
+        }
+
+        function fallbackOpenBat() {
+          setStatus('Đang tải script mở profile…');
+          fetch('/api/tools/chrome-open-profile-bat', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profileName: slug }),
+          })
+            .then(function (r) {
+              if (!r.ok) throw new Error('fail');
+              return r.blob();
+            })
+            .then(function (blob) {
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = 'Veo3Pro_Open_' + slug + '.bat';
+              a.click();
+              URL.revokeObjectURL(a.href);
+              setStatus(
+                'Đã tải file mở profile. Double-click để mở Chrome RIÊNG (lần đầu sẽ tự cài bridge).',
+                true,
+              );
+            })
+            .catch(function () {
+              setStatus('Không mở được Chrome profile. Cho phép popup và thử lại.', true);
+            });
+        }
+
+        window.addEventListener('blur', function () {
+          launched = true;
+          localStorage.setItem(BRIDGE_KEY, '1');
+          setStatus('Đã gửi lệnh mở Chrome profile mới. Có thể đóng cửa sổ này.');
+          setTimeout(function () {
+            try {
+              window.close();
+            } catch (e) {}
+          }, 600);
+        });
+
+        retryBtn.addEventListener('click', tryProtocol);
+        setupBtn.addEventListener('click', downloadSetupAndOpen);
+
+        tryProtocol();
+
+        setTimeout(function () {
+          if (launched) return;
+          if (localStorage.getItem(BRIDGE_KEY) === '1') {
+            setStatus(
+              'Nếu Chrome chưa mở: Windows có thể hỏi «Cho phép mở Veo3Pro?» — chọn Cho phép. Hoặc bấm Thử mở lại.',
+              true,
+            );
+            retryBtn.hidden = false;
+          } else {
+            setStatus('Lần đầu trên máy Windows: cần cài bridge (1 lần).', true);
+            setupBtn.hidden = false;
+            downloadSetupAndOpen();
+          }
+        }, 1400);
+      })();
+    </script>
+  </body>
+</html>
